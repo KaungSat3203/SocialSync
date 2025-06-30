@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
+	"os" // Make sure os is imported for os.Getenv and os.Stat
 
 	"social-sync-backend/lib"
 	"social-sync-backend/routes"
@@ -31,10 +31,28 @@ func CORSMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
-	// Load environment variables
-	if err := godotenv.Load(); err != nil {
-		log.Fatalf("❌ Error loading .env file: %v", err)
+	// --- MODIFICATION START ---
+
+	// Load environment variables conditionally
+	// Check if APP_ENV is NOT "production". You will set APP_ENV=production on Render.
+	if os.Getenv("APP_ENV") != "production" {
+		// Check if .env file actually exists before trying to load it
+		if _, err := os.Stat(".env"); err == nil {
+			if err := godotenv.Load(); err != nil {
+				// Log a warning if .env fails to load in non-production, but don't fatal
+				// This allows the app to proceed if variables are set through other means (e.g., CI/CD)
+				log.Printf("⚠️ Warning: Error loading .env file (continuing assuming variables are set externally): %v", err)
+			} else {
+				log.Println("✅ .env file loaded successfully.")
+			}
+		} else {
+			log.Println("ℹ️ .env file not found locally, continuing with environment variables.")
+		}
+	} else {
+		log.Println("✅ Running in production environment, loading variables from OS environment.")
 	}
+
+	// --- MODIFICATION END ---
 
 	// Initialize database
 	lib.ConnectDB()
@@ -51,6 +69,7 @@ func main() {
 
 	// Initialize Cloudinary
 	if err := lib.InitCloudinary(); err != nil {
+		// This will now check variables loaded from Render's environment
 		log.Fatalf("❌ Failed to initialize Cloudinary: %v", err)
 	}
 	log.Println("✅ Cloudinary initialized!")
@@ -60,7 +79,7 @@ func main() {
 		cron.Recover(cron.DefaultLogger),
 		cron.DelayIfStillRunning(cron.DefaultLogger),
 	))
-	if _, err := c.AddFunc("@every 24h", func() {
+	if _, err := c.AddFunc("@every 24h", func() { // Note: Your log says "every 12h" but code is "every 24h"
 		log.Println("🔁 Running scheduled social account sync...")
 		utils.SyncAllSocialAccountsTask(lib.DB)
 	}); err != nil {
@@ -68,14 +87,14 @@ func main() {
 	}
 	c.Start()
 	defer c.Stop()
-	log.Println("✅ Cron job started (every 12h).")
+	log.Println("✅ Cron job started (every 24h).") // Corrected log message for clarity
 
 	// Setup routes and middleware
 	r := routes.InitRoutes()
 	handler := CORSMiddleware(r)
 
 	// Start server
-	port := os.Getenv("PORT")
+	port := os.Getenv("PORT") // This will now correctly get PORT from Render's environment
 	if port == "" {
 		port = "8080"
 	}
