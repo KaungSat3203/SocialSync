@@ -1,20 +1,65 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import axios from 'axios';
 import SocialAccountCard from '../../components/SocialAccountCard';
-import DisconnectModal from '../../components/DisconnectModal'; // Updated import statement
-import { SiMastodon } from 'react-icons/si';
+import DisconnectModal from '../../components/DisconnectModal';
 
+import { SiMastodon } from 'react-icons/si';
 import {
   FaFacebook,
   FaInstagram,
   FaYoutube,
   FaTiktok,
   FaTwitter,
-  FaTelegram, // Added FaTelegram
+  FaTelegram,
 } from 'react-icons/fa';
-import { FaSquareThreads } from 'react-icons/fa6'; // Added FaSquareThreads
-import axios from 'axios';
+import { FaSquareThreads } from 'react-icons/fa6';
+
+const backendToDisplayName = {
+  facebook: 'Facebook',
+  instagram: 'Instagram',
+  youtube: 'YouTube',
+  twitter: 'Twitter (X)',
+  mastodon: 'Mastodon',
+  threads: 'Threads',
+  telegram: 'Telegram',
+  tiktok: 'TikTok',
+};
+
+const platformsList = [
+  'facebook',
+  'instagram',
+  'youtube',
+  'twitter',
+  'mastodon',
+  'threads',
+  'telegram',
+  'tiktok',
+];
+
+const getIcon = (platform) => {
+  switch (platform) {
+    case 'Facebook':
+      return FaFacebook;
+    case 'Instagram':
+      return FaInstagram;
+    case 'YouTube':
+      return FaYoutube;
+    case 'TikTok':
+      return FaTiktok;
+    case 'Twitter (X)':
+      return FaTwitter;
+    case 'Mastodon':
+      return SiMastodon;
+    case 'Threads':
+      return FaSquareThreads;
+    case 'Telegram':
+      return FaTelegram;
+    default:
+      return null;
+  }
+};
 
 export default function ManageAccountPage() {
   const [platforms, setPlatforms] = useState([]);
@@ -23,63 +68,12 @@ export default function ManageAccountPage() {
   const [statusMessage, setStatusMessage] = useState('');
   const [statusType, setStatusType] = useState('success');
 
-  // Modal specific state
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [platformToDisconnect, setPlatformToDisconnect] = useState(null);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
 
-  // Map backend platform keys to frontend display names
-  // Reordered to move TikTok to the end
-  const backendToDisplayName = {
-    facebook: 'Facebook',
-    instagram: 'Instagram',
-    youtube: 'YouTube',
-    twitter: 'Twitter (X)',
-    mastodon: 'Mastodon',
-    threads: 'Threads',
-    telegram: 'Telegram',
-    tiktok: 'TikTok', // Moved to the end
-  };
-
-  // List of platforms to display, reordered for TikTok
-  const platformsList = [
-    'facebook',
-    'instagram',
-    'youtube',
-    'twitter',
-    'mastodon',
-    'threads',
-    'telegram',
-    'tiktok', // Moved to the end
-  ];
-
-
-  // Return the appropriate icon component based on display name
-  const getIcon = (platform) => {
-    switch (platform) {
-      case 'Facebook':
-        return FaFacebook;
-      case 'Instagram':
-        return FaInstagram;
-      case 'YouTube':
-        return FaYoutube;
-      case 'TikTok':
-        return FaTiktok;
-      case 'Twitter (X)':
-        return FaTwitter;
-      case 'Mastodon':
-        return SiMastodon;
-      case 'Threads': // Added Threads
-        return FaSquareThreads;
-      case 'Telegram': // Added Telegram
-        return FaTelegram;
-      default:
-        return null;
-    }
-  };
-
-  const fetchAccounts = async () => {
+  const fetchAccounts = useCallback(async () => {
     if (!token) {
       setError('Access token not found.');
       setLoading(false);
@@ -95,8 +89,7 @@ export default function ManageAccountPage() {
 
       const accounts = Array.isArray(res.data) ? res.data : [];
 
-      // Create platform data by mapping backend keys to frontend display names
-      const platformData = platformsList.map((backendKey) => { // Iterate over platformsList to maintain order
+      const platformData = platformsList.map((backendKey) => {
         const displayName = backendToDisplayName[backendKey];
         const account = accounts.find(
           (acc) => acc?.platform?.toLowerCase() === backendKey
@@ -106,7 +99,6 @@ export default function ManageAccountPage() {
           name: displayName,
           icon: getIcon(displayName),
           connected: !!account,
-          // Defensive check on profilePictureUrl
           userProfilePic:
             account?.profilePictureUrl && account.profilePictureUrl !== 'null'
               ? account.profilePictureUrl
@@ -123,11 +115,11 @@ export default function ManageAccountPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     fetchAccounts();
-  }, []);
+  }, [fetchAccounts]);
 
   useEffect(() => {
     if (statusMessage) {
@@ -146,7 +138,6 @@ export default function ManageAccountPage() {
     const isFacebookConnected = platforms.find((p) => p.name === 'Facebook')?.connected;
 
     if (!isConnected) {
-      // Logic for connecting (no change here)
       if (platformName === 'Instagram' && !isFacebookConnected) {
         setStatusMessage('Please connect your Facebook Page first before connecting Instagram.');
         setStatusType('error');
@@ -154,34 +145,31 @@ export default function ManageAccountPage() {
       }
 
       try {
-        if (platformName === 'Facebook') {
-          window.location.href = `http://localhost:8080/auth/facebook/login?token=${token}`;
-        } else if (platformName === 'Instagram') {
+        const urlMap = {
+          Facebook: `http://localhost:8080/auth/facebook/login?token=${token}`,
+          YouTube: `http://localhost:8080/auth/youtube/login?token=${token}`,
+          TikTok: `http://localhost:8080/auth/tiktok/login?token=${token}`,
+          'Twitter (X)': `http://localhost:8080/auth/twitter/login?token=${token}`,
+          Threads: `http://localhost:8080/auth/threads/login?token=${token}`,
+          Telegram: `http://localhost:8080/auth/telegram/login?token=${token}`,
+        };
+
+        if (platformName === 'Instagram') {
           await axios.post(
             'http://localhost:8080/connect/instagram',
             {},
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
+            { headers: { Authorization: `Bearer ${token}` } }
           );
           setStatusMessage('Instagram account connected successfully!');
           setStatusType('success');
           fetchAccounts();
-        } else if (platformName === 'YouTube') {
-          window.location.href = `http://localhost:8080/auth/youtube/login?token=${token}`;
-        } else if (platformName === 'TikTok') {
-          window.location.href = `http://localhost:8080/auth/tiktok/login?token=${token}`;
-        } else if (platformName === 'Twitter (X)') {
-          window.location.href = `http://localhost:8080/auth/twitter/login?token=${token}`;
         } else if (platformName === 'Mastodon') {
           const instance = 'mastodon.social';
           window.location.href = `http://localhost:8080/auth/mastodon/login?instance=${encodeURIComponent(
             instance
           )}&token=${token}`;
-        } else if (platformName === 'Threads') {
-          window.location.href = `http://localhost:8080/auth/threads/login?token=${token}`;
-        } else if (platformName === 'Telegram') {
-          window.location.href = `http://localhost:8080/auth/telegram/login?token=${token}`;
+        } else if (urlMap[platformName]) {
+          window.location.href = urlMap[platformName];
         } else {
           setStatusMessage(`Connect to ${platformName} is not yet implemented.`);
           setStatusType('error');
@@ -192,24 +180,26 @@ export default function ManageAccountPage() {
         setStatusType('error');
       }
     } else {
-      // Logic for showing confirmation modal before disconnecting
       setPlatformToDisconnect(platformName);
       setShowConfirmModal(true);
     }
   };
 
   const handleConfirmDisconnect = async () => {
-    setShowConfirmModal(false); // Close the modal immediately
+    setShowConfirmModal(false);
     if (!platformToDisconnect) return;
 
     try {
-      await axios.delete(`http://localhost:8080/api/social-accounts/${platformToDisconnect.toLowerCase()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(
+        `http://localhost:8080/api/social-accounts/${platformToDisconnect.toLowerCase()}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
       setPlatforms((prev) =>
         prev.map((p) =>
-          p.name === platformToDisconnect ? { ...p, connected: false, userProfilePic: null, accountName: '' } : p
+          p.name === platformToDisconnect
+            ? { ...p, connected: false, userProfilePic: null, accountName: '' }
+            : p
         )
       );
 
@@ -220,13 +210,13 @@ export default function ManageAccountPage() {
       setStatusMessage(msg);
       setStatusType('error');
     } finally {
-      setPlatformToDisconnect(null); // Clear the platform being disconnected
+      setPlatformToDisconnect(null);
     }
   };
 
   const handleCloseConfirmModal = () => {
     setShowConfirmModal(false);
-    setPlatformToDisconnect(null); // Clear the platform being disconnected
+    setPlatformToDisconnect(null);
   };
 
   return (
@@ -241,7 +231,9 @@ export default function ManageAccountPage() {
       {statusMessage && (
         <div
           className={`mb-4 p-3 rounded-lg text-sm ${
-            statusType === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+            statusType === 'success'
+              ? 'bg-green-100 text-green-800'
+              : 'bg-red-100 text-red-800'
           }`}
           role="alert"
           aria-live="polite"
@@ -276,7 +268,6 @@ export default function ManageAccountPage() {
         </>
       )}
 
-      {/* Disconnect Modal */}
       <DisconnectModal
         show={showConfirmModal}
         onClose={handleCloseConfirmModal}

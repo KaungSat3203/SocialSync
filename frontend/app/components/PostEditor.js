@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import { useRef, useState } from 'react';
 import { uploadToCloudinary } from '../hooks/api/uploadToCloudinary';
@@ -203,9 +204,15 @@ export default function PostEditor({
                 {isVideo ? (
                   <video src={url} controls className="w-full h-full object-cover" />
                 ) : (
-                  <img
+                  <Image
                     src={url}
                     alt={`Media preview ${i + 1}`}
+                    sizes="100vw"
+                    // Added explicit width and height props for the Next.js Image component
+                    // You might need to adjust these values based on your desired display size
+                    // or fetch the actual dimensions if available from Cloudinary metadata.
+                    width={112} // Corresponds to w-28 (112px)
+                    height={112} // Corresponds to h-28 (112px)
                     className="w-full h-full object-cover"
                   />
                 )}

@@ -20,7 +20,7 @@ const AuthCallback = () => {
       console.error('Access token not found in callback');
       router.push('/login'); // fallback
     }
-  }, []);
+  }, [router]); // <-- Add 'router' to the dependency array
 
   return <p className="text-center mt-10">Logging in...</p>;
 };
