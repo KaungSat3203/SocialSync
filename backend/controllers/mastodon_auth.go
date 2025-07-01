@@ -12,12 +12,12 @@ import (
 	"log"
 	"net/http"
 	// "net/url"
-	"os"
+	// "os"
 	"strings"
 	"time"
 
 	"social-sync-backend/middleware"
-
+	"social-sync-backend/utils"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 )
@@ -41,7 +41,7 @@ func registerMastodonApp(instanceURL string) (*MastodonAppInfo, error) {
 		return app, nil
 	}
 
-	redirectURI := os.Getenv("MASTODON_REDIRECT_URL")
+	redirectURI := utils.GetCallbackURL("mastodon")
 	if redirectURI == "" {
 		redirectURI = "http://localhost:8080/auth/mastodon/callback"
 	}
@@ -270,7 +270,9 @@ func MastodonCallbackHandler(db *sql.DB) http.HandlerFunc {
 			http.Error(w, "Failed to save Mastodon account: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
+		redirectURL := fmt.Sprintf("%s/home/manage-accounts?connected=mastodon", utils.GetFrontendURL())
+		http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 
-		http.Redirect(w, r, "http://localhost:3000/home/manage-accounts?connected=mastodon", http.StatusSeeOther)
+		// http.Redirect(w, r, "http://localhost:3000/home/manage-accounts?connected=mastodon", http.StatusSeeOther)
 	}
 }

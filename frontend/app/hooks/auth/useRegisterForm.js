@@ -7,6 +7,7 @@ export const useRegisterForm = () => {
     password: '',
     confirmPassword: '',
   });
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
   const [error, setError] = useState('');
 
@@ -24,7 +25,7 @@ export const useRegisterForm = () => {
     }
 
     try {
-      const res = await fetch('http://localhost:8080/api/register', {
+      const res = await fetch(`${baseUrl}/api/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

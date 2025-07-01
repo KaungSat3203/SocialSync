@@ -1,26 +1,29 @@
 package controllers
 
 import (
-    "bytes"
-    "context"
-    "database/sql"
-    "encoding/json"
-    "io/ioutil"
-    "net/http"
-    "os"
+	"bytes"
+	"context"
+	"database/sql"
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
+	"os"
+    "fmt"
+	"social-sync-backend/lib"
+	"social-sync-backend/models"
+	"social-sync-backend/utils"
 
-    "social-sync-backend/lib"
-    "social-sync-backend/models"
-
-    "golang.org/x/oauth2"
-    "golang.org/x/oauth2/google"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 )
 
 func getGoogleOAuthConfig() *oauth2.Config {
+
+    redirectUrl := utils.GetCallbackURL("google")
     return &oauth2.Config{
         ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
         ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
-        RedirectURL:  os.Getenv("GOOGLE_REDIRECT_URI"),
+        RedirectURL:  redirectUrl,
         Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"},
         Endpoint:     google.Endpoint,
     }
@@ -104,8 +107,9 @@ func GoogleCallbackHandler(db *sql.DB) http.HandlerFunc {
             http.Error(w, "Token error", http.StatusInternalServerError)
             return
         }
-
-        redirectURL := "http://localhost:3000/auth/callback?access_token=" + accessToken + "&refresh_token=" + refreshToken
+        frontend := utils.GetFrontendURL()
+        redirectURL := fmt.Sprintf("%s/auth/callback?access_token=%s&refresh_token=%s", frontend, accessToken, refreshToken)
         http.Redirect(w, r, redirectURL, http.StatusSeeOther)
+
     }
 }

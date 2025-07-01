@@ -24,6 +24,8 @@ export default function ProfileSettings() {
 
   const handleImageChange = async (e) => {
     const file = e.target.files[0];
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
     if (!file) return;
 
     setError(null);
@@ -36,7 +38,7 @@ export default function ProfileSettings() {
       formData.append('profileImage', file);
       const accessToken = localStorage.getItem('accessToken');
 
-      const response = await fetch('http://localhost:8080/api/profile/image', {
+      const response = await fetch(`${baseUrl}/api/profile/image`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${accessToken}` },
         body: formData,
@@ -45,7 +47,7 @@ export default function ProfileSettings() {
       if (!response.ok) throw new Error('Failed to upload image');
 
       const data = await response.json();
-      const fullImageUrl = data.imageUrl.startsWith('http') ? data.imageUrl : `http://localhost:8080${data.imageUrl}`;
+      const fullImageUrl = data.imageUrl.startsWith('http') ? data.imageUrl : `${baseUrl}${data.imageUrl}`;
 
       setImagePreview(fullImageUrl);
       setProfileData(prev => ({ ...prev, profileImage: fullImageUrl }));
@@ -59,7 +61,7 @@ export default function ProfileSettings() {
   const handleSaveChanges = async (field) => {
     try {
       const accessToken = localStorage.getItem('accessToken');
-      const response = await fetch('http://localhost:8080/api/profile', {
+      const response = await fetch(`${baseUrl}/api/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

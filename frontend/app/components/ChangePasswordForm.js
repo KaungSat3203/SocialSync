@@ -37,6 +37,7 @@ export default function ChangePasswordForm() {
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
   const handleChangePassword = async () => {
     setError(null);
@@ -55,7 +56,7 @@ export default function ChangePasswordForm() {
     setLoading(true);
     try {
       const accessToken = localStorage.getItem('accessToken');
-      const res = await fetch('http://localhost:8080/api/profile/password', {
+      const res = await fetch(`${baseUrl}/api/profile/password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

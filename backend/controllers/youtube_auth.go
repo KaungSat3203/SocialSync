@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"social-sync-backend/middleware"
+	"social-sync-backend/utils"
 
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
@@ -19,10 +20,11 @@ import (
 )
 
 func getYouTubeOAuthConfig() *oauth2.Config {
+	redirectUrl := utils.GetCallbackURL("youtube")
 	return &oauth2.Config{
 		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
-		RedirectURL:  os.Getenv("YOUTUBE_REDIRECT_URI"),
+		RedirectURL:  redirectUrl,
 		Scopes: []string{
 			"https://www.googleapis.com/auth/youtube.upload",
 			"https://www.googleapis.com/auth/youtube.readonly",
@@ -170,7 +172,9 @@ func YouTubeCallbackHandler(db *sql.DB) http.HandlerFunc {
 				return
 			}
 		}
+		redirectURL := fmt.Sprintf("%s/home/manage-accounts?connected=youtube", utils.GetFrontendURL())
+		http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 
-		http.Redirect(w, r, "http://localhost:3000/home/manage-accounts?connected=youtube", http.StatusSeeOther)
+		// http.Redirect(w, r, "http://localhost:3000/home/manage-accounts?connected=youtube", http.StatusSeeOther)
 	}
 }

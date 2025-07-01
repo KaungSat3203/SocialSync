@@ -67,6 +67,7 @@ export default function ManageAccountPage() {
   const [error, setError] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
   const [statusType, setStatusType] = useState('success');
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [platformToDisconnect, setPlatformToDisconnect] = useState(null);
@@ -81,7 +82,7 @@ export default function ManageAccountPage() {
     }
 
     try {
-      const res = await axios.get('http://localhost:8080/api/social-accounts', {
+      const res = await axios.get(`${baseUrl}/api/social-accounts`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -146,17 +147,17 @@ export default function ManageAccountPage() {
 
       try {
         const urlMap = {
-          Facebook: `http://localhost:8080/auth/facebook/login?token=${token}`,
-          YouTube: `http://localhost:8080/auth/youtube/login?token=${token}`,
-          TikTok: `http://localhost:8080/auth/tiktok/login?token=${token}`,
-          'Twitter (X)': `http://localhost:8080/auth/twitter/login?token=${token}`,
-          Threads: `http://localhost:8080/auth/threads/login?token=${token}`,
-          Telegram: `http://localhost:8080/auth/telegram/login?token=${token}`,
+          Facebook: `${baseUrl}/auth/facebook/login?token=${token}`,
+          YouTube: `${baseUrl}/auth/youtube/login?token=${token}`,
+          TikTok: `${baseUrl}/auth/tiktok/login?token=${token}`,
+          'Twitter (X)': `${baseUrl}/auth/twitter/login?token=${token}`,
+          Threads: `${baseUrl}/auth/threads/login?token=${token}`,
+          Telegram: `${baseUrl}/auth/telegram/login?token=${token}`,
         };
 
         if (platformName === 'Instagram') {
           await axios.post(
-            'http://localhost:8080/connect/instagram',
+            `${baseUrl}/connect/instagram`,
             {},
             { headers: { Authorization: `Bearer ${token}` } }
           );
@@ -165,7 +166,7 @@ export default function ManageAccountPage() {
           fetchAccounts();
         } else if (platformName === 'Mastodon') {
           const instance = 'mastodon.social';
-          window.location.href = `http://localhost:8080/auth/mastodon/login?instance=${encodeURIComponent(
+          window.location.href = `${baseUrl}/auth/mastodon/login?instance=${encodeURIComponent(
             instance
           )}&token=${token}`;
         } else if (urlMap[platformName]) {
@@ -191,7 +192,7 @@ export default function ManageAccountPage() {
 
     try {
       await axios.delete(
-        `http://localhost:8080/api/social-accounts/${platformToDisconnect.toLowerCase()}`,
+        `${baseUrl}/api/social-accounts/${platformToDisconnect.toLowerCase()}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

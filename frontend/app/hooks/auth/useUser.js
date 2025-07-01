@@ -5,6 +5,7 @@ export const useUser = () => {
   const [profileData, setProfileData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null); // Optional: for debugging
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -19,7 +20,7 @@ export const useUser = () => {
           return;
         }
 
-        const res = await fetch('http://localhost:8080/api/profile', {
+        const res = await fetch(`${baseUrl}/api/profile`, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,

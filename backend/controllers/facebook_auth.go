@@ -15,10 +15,12 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/facebook"
 	"social-sync-backend/middleware"
+	"social-sync-backend/utils"
 )
 
 func getFacebookOAuthConfig() *oauth2.Config {
-	redirectURL := os.Getenv("FACEBOOK_REDIRECT_URL")
+	// redirectURL := os.Getenv("FACEBOOK_REDIRECT_URL")
+	redirectURL := utils.GetCallbackURL("facebook")
 	if redirectURL == "" {
 		log.Fatal("FACEBOOK_REDIRECT_URL is empty!")
 	}
@@ -143,8 +145,10 @@ func FacebookCallbackHandler(db *sql.DB) http.HandlerFunc {
 			http.Error(w, "Failed to save Facebook Page account: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
+		redirectURL := fmt.Sprintf("%s/home/manage-accounts?connected=facebook", utils.GetFrontendURL())
+		http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 
-		http.Redirect(w, r, "http://localhost:3000/home/manage-accounts?connected=facebook", http.StatusSeeOther)
+		// http.Redirect(w, r, "http://localhost:3000/home/manage-accounts?connected=facebook", http.StatusSeeOther)
 	}
 }
 

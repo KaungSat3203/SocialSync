@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"social-sync-backend/middleware"
+	"social-sync-backend/utils"
 
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
@@ -36,7 +37,7 @@ func generatePKCE() (string, string, error) {
 
 // getTwitterOAuthConfig returns OAuth2 config for Twitter with environment variables
 func getTwitterOAuthConfig() *oauth2.Config {
-	redirectURL := os.Getenv("TWITTER_REDIRECT_URL")
+	redirectURL := utils.GetCallbackURL("twitter")
 	if redirectURL == "" {
 		log.Fatal("TWITTER_REDIRECT_URL is empty!")
 	}
@@ -197,7 +198,9 @@ func TwitterCallbackHandler(db *sql.DB) http.HandlerFunc {
 			http.Error(w, "Failed to save Twitter account: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
+		redirectURL := fmt.Sprintf("%s/home/manage-accounts?connected=twitter", utils.GetFrontendURL())
+		http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 
-		http.Redirect(w, r, "http://localhost:3000/home/manage-accounts?connected=twitter", http.StatusSeeOther)
+		// http.Redirect(w, r, "http://localhost:3000/home/manage-accounts?connected=twitter", http.StatusSeeOther)
 	}
 }
