@@ -13,6 +13,7 @@ export default function ProfileSettings() {
   const [imagePreview, setImagePreview] = useState(null);
   const [error, setError] = useState(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
   const user = useUser();
 
@@ -24,7 +25,6 @@ export default function ProfileSettings() {
 
   const handleImageChange = async (e) => {
     const file = e.target.files[0];
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
     if (!file) return;
 

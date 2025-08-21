@@ -4,7 +4,8 @@ import (
 	"net/http"
 	"social-sync-backend/controllers"
 	"social-sync-backend/middleware"
-
+	// "social-sync-backend/lib"
+	
 	"github.com/gorilla/mux"
 )
 
@@ -33,6 +34,8 @@ func RegisterUserRoutes(r *mux.Router) {
 		middleware.JWTMiddleware(http.HandlerFunc(controllers.ProfilePasswordHandler))).Methods("PUT", "OPTIONS")
 
 	r.Handle("/api/upload", middleware.EnableCORS(middleware.JWTMiddleware(http.HandlerFunc(controllers.UploadImageHandler)))).Methods("POST", "OPTIONS")
+
+	// r.HandleFunc("/api/facebook/analytics", controllers.GetFacebookPostAnalyticsHandler(lib.DB)).Methods("GET")
 
 
 }
