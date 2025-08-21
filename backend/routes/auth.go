@@ -70,6 +70,15 @@ func AuthRoutes(r *mux.Router) {
 		http.HandlerFunc(controllers.PostToMastodonHandler(lib.DB)),
 	)).Methods("POST")
 
+		// ----------- Telegram Connect ----------- //
+	r.Handle("/connect/telegram", middleware.JWTMiddleware(
+		http.HandlerFunc(controllers.ConnectTelegram),
+	)).Methods("POST")
+
+	r.Handle("/api/telegram/post", middleware.JWTMiddleware(
+		http.HandlerFunc(controllers.PostToTelegram),
+	)).Methods("POST")
+
 	// ----------- Social Account Management ----------- //
 	r.Handle("/api/social-accounts", middleware.EnableCORS(middleware.JWTMiddleware(
 		http.HandlerFunc(controllers.GetSocialAccountsHandler(lib.DB)),

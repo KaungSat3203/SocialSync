@@ -1,7 +1,5 @@
 export function useMultiPlatformPublish({ message, mediaFiles, youtubeConfig }) {
   const publish = async (platforms) => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-
     const token = localStorage.getItem('accessToken');
     if (!token) {
       return platforms.map((p) => ({
@@ -20,7 +18,7 @@ export function useMultiPlatformPublish({ message, mediaFiles, youtubeConfig }) 
         switch (platform) {
           case 'facebook':
             // Facebook expects JSON: { message, mediaUrls: [...] }
-            res = await fetch(`${baseUrl}/api/facebook/post`, {
+            res = await fetch('http://localhost:8080/api/facebook/post', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -32,7 +30,7 @@ export function useMultiPlatformPublish({ message, mediaFiles, youtubeConfig }) 
 
           case 'instagram':
             // Instagram expects JSON: { caption, mediaUrls: [...] }
-            res = await fetch(`${baseUrl}/api/instagram/post`, {
+            res = await fetch('http://localhost:8080/api/instagram/post', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -43,7 +41,7 @@ export function useMultiPlatformPublish({ message, mediaFiles, youtubeConfig }) 
             break;
 
           case 'twitter':
-            res = await fetch(`${baseUrl}/api/twitter/post`, {
+            res = await fetch('http://localhost:8080/api/twitter/post', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -67,7 +65,7 @@ export function useMultiPlatformPublish({ message, mediaFiles, youtubeConfig }) 
             formData.append('privacy', youtubeConfig.privacy || 'private');
             formData.append('category_id', youtubeConfig.categoryId || '22');
 
-            res = await fetch(`${baseUrl}/api/youtube/post`, {
+            res = await fetch('http://localhost:8080/api/youtube/post', {
               method: 'POST',
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -87,7 +85,7 @@ export function useMultiPlatformPublish({ message, mediaFiles, youtubeConfig }) 
               formData.append('images', blob, `image${i}.jpg`);
             }
 
-            res = await fetch(`${baseUrl}/api/mastodon/post`, {
+            res = await fetch('http://localhost:8080/api/mastodon/post', {
               method: 'POST',
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -96,6 +94,17 @@ export function useMultiPlatformPublish({ message, mediaFiles, youtubeConfig }) 
             });
             break;
           }
+
+          case 'telegram':
+            res = await fetch('http://localhost:8080/api/telegram/post', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ message, mediaUrls: mediaFiles }),
+            });
+            break;
 
           default:
             results.push({ platform, success: false, error: 'Unsupported platform' });

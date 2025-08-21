@@ -8,20 +8,32 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"social-sync-backend/middleware"
+	"social-sync-backend/models"
+
+	"github.com/google/uuid"
 )
 
 type FacebookPostRequest struct {
-	Message    string   `json:"message"`
-	MediaUrls  []string `json:"mediaUrls"`
+	Message   string   `json:"message"`
+	MediaUrls []string `json:"mediaUrls"`
 }
 
 func PostToFacebookHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID, err := middleware.GetUserIDFromContext(r)
+		// Get user ID string from context
+		userIDStr, err := middleware.GetUserIDFromContext(r)
 		if err != nil {
 			http.Error(w, "Unauthorized: User not authenticated", http.StatusUnauthorized)
+			return
+		}
+
+		// Convert user ID string to uuid.UUID
+		userID, err := uuid.Parse(userIDStr)
+		if err != nil {
+			http.Error(w, "Invalid user ID format", http.StatusBadRequest)
 			return
 		}
 
@@ -36,6 +48,7 @@ func PostToFacebookHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		// Fetch Facebook page access token and page ID from DB
 		var accessToken, pageID string
 		err = db.QueryRow(`
 			SELECT access_token, social_id
@@ -51,7 +64,28 @@ func PostToFacebookHandler(db *sql.DB) http.HandlerFunc {
 			return url.QueryEscape(s)
 		}
 
-		// CASE 1: Text only
+		// Helper function to save post in DB, now accepts multiple media URLs
+		savePost := func(platformPostID string, mediaURLs []string) error {
+			post := models.Post{
+				ID:             uuid.New(),
+				UserID:         userID,
+				Platform:       "facebook",
+				PlatformPostID: platformPostID,
+				Message:        req.Message,
+				MediaURLs:      mediaURLs,
+				PostedAt:       time.Now().UTC(),
+				Status:         "posted",
+				CreatedAt:      time.Now().UTC(),
+				UpdatedAt:      time.Now().UTC(),
+			}
+			return models.SavePost(db, post)
+		}
+
+		type fbResponse struct {
+			ID string `json:"id"`
+		}
+
+		// CASE 1: Text only post
 		if len(req.MediaUrls) == 0 {
 			postURL := fmt.Sprintf("https://graph.facebook.com/%s/feed", pageID)
 			payload := strings.NewReader(fmt.Sprintf("message=%s&access_token=%s", urlEncode(req.Message), urlEncode(accessToken)))
@@ -69,18 +103,29 @@ func PostToFacebookHandler(db *sql.DB) http.HandlerFunc {
 				return
 			}
 
+			var fbRes fbResponse
+			if err := json.Unmarshal(body, &fbRes); err != nil || fbRes.ID == "" {
+				http.Error(w, "Failed to parse Facebook post ID", http.StatusInternalServerError)
+				return
+			}
+
+			if err := savePost(fbRes.ID, nil); err != nil {
+				http.Error(w, "Failed to save post in database", http.StatusInternalServerError)
+				return
+			}
+
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Text post published successfully"))
+			w.Write([]byte(fmt.Sprintf("Text post published successfully with post ID %s", fbRes.ID)))
 			return
 		}
 
 		// Separate images and videos
 		var imageUrls, videoUrls []string
-		for _, url := range req.MediaUrls {
-			if strings.Contains(url, ".mp4") || strings.Contains(url, "/video/") {
-				videoUrls = append(videoUrls, url)
+		for _, u := range req.MediaUrls {
+			if strings.Contains(u, ".mp4") || strings.Contains(u, "/video/") {
+				videoUrls = append(videoUrls, u)
 			} else {
-				imageUrls = append(imageUrls, url)
+				imageUrls = append(imageUrls, u)
 			}
 		}
 
@@ -108,8 +153,19 @@ func PostToFacebookHandler(db *sql.DB) http.HandlerFunc {
 				return
 			}
 
+			var fbRes fbResponse
+			if err := json.Unmarshal(body, &fbRes); err != nil || fbRes.ID == "" {
+				http.Error(w, "Failed to parse Facebook video post ID", http.StatusInternalServerError)
+				return
+			}
+
+			if err := savePost(fbRes.ID, videoUrls); err != nil {
+				http.Error(w, "Failed to save video post in database", http.StatusInternalServerError)
+				return
+			}
+
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Video post published successfully"))
+			w.Write([]byte(fmt.Sprintf("Video post published successfully with post ID %s", fbRes.ID)))
 			return
 		}
 
@@ -134,9 +190,7 @@ func PostToFacebookHandler(db *sql.DB) http.HandlerFunc {
 					return
 				}
 
-				var fbRes struct {
-					ID string `json:"id"`
-				}
+				var fbRes fbResponse
 				if err := json.Unmarshal(body, &fbRes); err != nil || fbRes.ID == "" {
 					http.Error(w, "Failed to parse media ID", http.StatusInternalServerError)
 					return
@@ -144,7 +198,6 @@ func PostToFacebookHandler(db *sql.DB) http.HandlerFunc {
 				attachedMediaIDs = append(attachedMediaIDs, fbRes.ID)
 			}
 
-			// Post with attached images
 			var mediaParams []string
 			for i, id := range attachedMediaIDs {
 				mediaParams = append(mediaParams, fmt.Sprintf(`attached_media[%d]={"media_fbid":"%s"}`, i, id))
@@ -171,8 +224,19 @@ func PostToFacebookHandler(db *sql.DB) http.HandlerFunc {
 				return
 			}
 
+			var fbRes fbResponse
+			if err := json.Unmarshal(body, &fbRes); err != nil || fbRes.ID == "" {
+				http.Error(w, "Failed to parse Facebook post ID", http.StatusInternalServerError)
+				return
+			}
+
+			if err := savePost(fbRes.ID, imageUrls); err != nil {
+				http.Error(w, "Failed to save image post in database", http.StatusInternalServerError)
+				return
+			}
+
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Image post published successfully"))
+			w.Write([]byte(fmt.Sprintf("Image post published successfully with post ID %s", fbRes.ID)))
 			return
 		}
 
